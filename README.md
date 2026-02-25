@@ -1,0 +1,89 @@
+# Sbomit
+
+Generate Software Bill of Materials (SBOMs) from Witness attestations.
+
+## Overview
+
+`sbomit` parses witness attestation files and generates SBOMs in SPDX or CycloneDX format. It:
+- Extracts files from attestation types
+- Resolves files to packages using ecosystem-specific resolvers (Python, Go, Rust, etc.)
+- Filters out package files already listed as packages
+- Supports multiple SBOM output formats
+
+## Installation
+
+```bash
+go install github.com/absol27/sbomit@latest
+```
+
+## Usage
+
+```bash
+sbomit generate --attestation attestation.json
+
+--attestation string    Path to witness attestation file (required)
+--output string         Output file path (default: stdout)
+--format string         Output format: spdx22, spdx23, cdx14, cdx15 (default: "spdx23")
+--name string           Application name (default: "sbomit-sbom")
+--version string        Application version (default: "0.0.1")
+--author strings        Author(s) - can be repeated
+--types strings         Attestation types to process (default: material,command-run,product)
+--catalog string        Cataloger to run before processing attestations (supported: syft)
+--project-dir string    Project directory to scan with the cataloger (defaults to current directory)
+```
+
+## Syft Catalog Option
+
+Sbomit outputs a flat list of dependencies. If the SBOM metadata syft derives includes dependency structure, using syft first can help preserve more relationship context.
+
+Example:
+
+```bash
+sbomit generate --attestation attestation.json --catalog syft --project-dir /path/to/project
+```
+
+## Development
+
+### Attestation Extractors
+
+Modular extractors for different attestation types:
+- `MaterialExtractor` - Build Input materials
+- `CommandRunExtractor` - Opened files from processes
+- `ProductExtractor` - Built artifacts
+
+Implement `Extractor` interface to add new types.
+
+### Resolvers
+
+Ecosystem-specific package resolvers that extract packages from file paths:
+- `PythonResolver` - Resolves from `site-packages/`, `dist-packages/`, `.dist-info`
+- `GoResolver` - Resolves from module cache paths under `pkg/mod/`
+- `RustResolver` - Resolves from Cargo registry paths
+- `JavaScriptResolver` - Resolves pnpm-style paths under `node_modules/.pnpm/`
+
+Each resolver implements `Resolver` and optionally `PackageFileFilterer` to filter its own package files.
+
+### Processing Pipeline
+
+```
+Attestation → Extract Files → Filter Cache Files → 
+Run Resolvers → Filter Package Files → Generate SBOM
+```
+
+## Testing
+
+```bash
+go run . generate --attestation test/sample-attestation.json
+``` 
+   
+## License  
+   
+Sbomit is licensed under [Apache 2.0](LICENSE).
+   
+## Contributing  
+   
+Contributions are welcome.
+   
+## Contact  
+   
+For any inquiries or issues, please open an issue on the [Sbomit GitHub repository](https://github.com/absol27/sbomit/issues).
